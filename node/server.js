@@ -15,10 +15,8 @@ const port = process.env.PORT || 5000;
    MIDDLEWARE
 ======================= */
 
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
-  credentials: true
-}));
+app.use(cors());
+
 
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -48,6 +46,16 @@ const upload = multer({ storage });
 /* =======================
    ROUTES
 ======================= */
+
+// HEALTH CHECK (Railway / Monitoring)
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date()
+  });
+});
+
 
 /**
  * REPORT ISSUE
