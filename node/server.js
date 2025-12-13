@@ -162,5 +162,5 @@ function calculateSLA(severity) {
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-  console.log(`Gemini Service initialized with model: jemini-1.5-flash-001`);
+  console.log(`Gemini Service initialized with model: gemini-2.5-flash`);
 });

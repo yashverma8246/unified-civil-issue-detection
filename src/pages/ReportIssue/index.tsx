@@ -2,13 +2,18 @@ import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { Camera, MapPin, Upload, Loader2, AlertCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Camera, Upload, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
 export const ReportIssue = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  if (!user) {
+      return <Navigate to="/auth" replace />;
+  }
+
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -149,7 +154,7 @@ export const ReportIssue = () => {
                 <div className="rounded-md bg-green-50 p-4 border border-green-200">
                     <div className="flex items-start">
                         <div className="flex-shrink-0">
-                            <AlertCircle className="h-5 w-5 text-green-400" />
+                            <CheckCircle className="h-5 w-5 text-emerald-500" />
                         </div>
                         <div className="ml-3">
                             <h3 className="text-sm font-medium text-green-800">Report Submitted Successfully!</h3>

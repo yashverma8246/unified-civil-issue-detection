@@ -1,12 +1,18 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuth } from '@/context/AuthContext';
 import { Menu, X, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
 
 export const Navbar = () => {
-  const { isAuthenticated, logout } = useAuthStore();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/auth');
+  };
 
   return (
     <nav className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
@@ -31,12 +37,12 @@ export const Navbar = () => {
                 Track Issues
               </Link>
               
-              {isAuthenticated ? (
+              {user ? (
                 <>
-                  <Link to="/dashboard" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">
+                  <Link to={user.role === 'ADMIN' ? '/admin' : user.role === 'WORKER' ? '/worker' : '/client'} className="text-slate-600 hover:text-blue-600 font-medium transition-colors">
                     Dashboard
                   </Link>
-                  <Button variant="outline" size="sm" onClick={logout}>
+                  <Button variant="outline" size="sm" onClick={handleLogout}>
                     Logout
                   </Button>
                 </>
@@ -70,12 +76,12 @@ export const Navbar = () => {
            <Link to="/issues" className="block text-slate-600 hover:text-blue-600 font-medium">
              Track Issues
            </Link>
-           {isAuthenticated ? (
+           {user ? (
              <>
-               <Link to="/dashboard" className="block text-slate-600 hover:text-blue-600 font-medium">
+               <Link to={user.role === 'ADMIN' ? '/admin' : user.role === 'WORKER' ? '/worker' : '/client'} className="block text-slate-600 hover:text-blue-600 font-medium">
                  Dashboard
                </Link>
-               <Button variant="outline" size="sm" onClick={logout} className="w-full">
+               <Button variant="outline" size="sm" onClick={handleLogout} className="w-full">
                  Logout
                </Button>
              </>
