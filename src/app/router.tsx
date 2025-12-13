@@ -3,7 +3,7 @@ import { Layout } from './layout';
 import { Landing } from '@/pages/Landing';
 import { ReportIssue } from '@/pages/ReportIssue';
 
-import { Dashboard } from '@/pages/Dashboard';
+// import { Dashboard } from '@/pages/Dashboard';
 import { AuthPage } from '@/pages/Auth';
 import ClientDashboard from '@/components/dashboards/ClientDashboard';
 import WorkerDashboard from '@/components/dashboards/WorkerDashboard';
@@ -27,7 +27,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'dashboard',
-        element: <Dashboard />,
+        // element: <Dashboard />,
       },
       {
         path: 'client',

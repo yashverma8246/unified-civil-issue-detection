@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { MapPin, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import api from '@/services/api';
 
 interface Issue {
   issue_id: number;
@@ -22,10 +23,20 @@ export default function ClientDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/issues')
-      .then(res => res.json())
-      .then(data => setIssues(data))
-      .catch(console.error);
+    // api import is needed at top of file
+    api.get('/api/issues')
+      .then(res => {
+        if (Array.isArray(res.data)) {
+          setIssues(res.data);
+        } else {
+          console.error("API returned non-array:", res.data);
+          setIssues([]);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch issues:", err);
+        setIssues([]);
+      });
   }, []);
 
   return (
