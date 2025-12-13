@@ -11,10 +11,19 @@ require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Middleware
+/* =======================
+   MIDDLEWARE
+======================= */
+
 app.use(cors());
+
+
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+/* =======================
+   UPLOADS SETUP
+======================= */
 
 // Ensure uploads directory exists
 const uploadDir = path.join(__dirname, 'uploads');
@@ -22,7 +31,7 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
 
-// Multer Setup
+// Multer setup
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadDir);
@@ -31,15 +40,27 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + '-' + file.originalname);
   },
 });
-const upload = multer({ storage: storage });
 
-// Routes
+const upload = multer({ storage });
+
+/* =======================
+   ROUTES
+======================= */
+
+// HEALTH CHECK (Railway / Monitoring)
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date()
+  });
+});
+
 
 /**
  * REPORT ISSUE
- * Receives image, calls Gemini for analysis, saves to DB.
  */
-app.post('/api/report_issue', upload.single('image'), async (req, res) => {
+app.post('/api/report_issue', upload.single('image'), async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No image uploaded' });
@@ -51,7 +72,7 @@ app.post('/api/report_issue', upload.single('image'), async (req, res) => {
 
     console.log(`Processing issue report for ${req.file.filename}...`);
 
-    // 1. Call Gemini Service
+    // Call Gemini
     const aiResult = await classifyIssue(imageBuffer, mimeType);
     console.log('Gemini Analysis:', aiResult);
 
@@ -60,107 +81,137 @@ app.post('/api/report_issue', upload.single('image'), async (req, res) => {
       issue_type: aiResult.issue_type || 'Unknown',
       severity: aiResult.severity || 'Medium',
       department_assigned: aiResult.department || 'Admin',
-      description: req.body.description || aiResult.description || 'Reported by citizen',
+      description:
+        req.body.description ||
+        aiResult.description ||
+        'Reported by citizen',
       status: 'Reported',
-      sla_due_date: calculateSLA(aiResult.severity),
       sla_due_date: calculateSLA(aiResult.severity),
       reporter_id: req.body.reporter_id || 'anonymous',
       geo_latitude: req.body.geo_latitude || null,
       geo_longitude: req.body.geo_longitude || null,
     };
 
-    // 2. Save to DB via Model
     const savedIssue = await issueModel.createIssue(issueData);
 
-    res.json({ success: true, issue: savedIssue, analysis: aiResult });
+    res.json({
+      success: true,
+      issue: savedIssue,
+      analysis: aiResult,
+    });
   } catch (error) {
-    console.error('Error reporting issue:', error);
-    res.status(500).json({ error: 'Internal Server Error', details: error.message });
+    next(error);
   }
 });
 
 /**
  * RESOLVE ISSUE
- * Receives after-image, verifies with Gemini, updates DB.
  */
-app.post('/api/resolve_issue', upload.single('image_after'), async (req, res) => {
-  try {
-    const { issue_id } = req.body;
-    if (!req.file || !issue_id) {
-      return res.status(400).json({ error: 'Missing image or issue_id' });
-    }
+app.post(
+  '/api/resolve_issue',
+  upload.single('image_after'),
+  async (req, res, next) => {
+    try {
+      const { issue_id } = req.body;
 
-    // Retrieve original issue to get "before" image
-    const issue = await issueModel.getIssueById(issue_id);
+      if (!req.file || !issue_id) {
+        return res
+          .status(400)
+          .json({ error: 'Missing image or issue_id' });
+      }
 
-    if (!issue) {
-      return res.status(404).json({ error: 'Issue not found' });
-    }
+      const issue = await issueModel.getIssueById(issue_id);
+      if (!issue) {
+        return res.status(404).json({ error: 'Issue not found' });
+      }
 
-    // Resolve paths
-    // Handle both absolute and relative paths from DB
-    let beforeImagePath = issue.image_url_before;
-    if (beforeImagePath.startsWith('/uploads')) {
-      // e.g. /uploads/filename.jpg -> d:\...\node\uploads\filename.jpg
-      beforeImagePath = path.join(__dirname, beforeImagePath);
-    }
+      let beforeImagePath = issue.image_url_before;
+      if (beforeImagePath.startsWith('/uploads')) {
+        beforeImagePath = path.join(__dirname, beforeImagePath);
+      }
 
-    const afterImagePath = req.file.path;
+      const afterImagePath = req.file.path;
 
-    if (!fs.existsSync(beforeImagePath)) {
-      console.warn('Before image missing on disk:', beforeImagePath);
-    }
+      const beforeBuffer = fs.existsSync(beforeImagePath)
+        ? fs.readFileSync(beforeImagePath)
+        : fs.readFileSync(afterImagePath); // fallback
 
-    const beforeBuffer = fs.existsSync(beforeImagePath)
-      ? fs.readFileSync(beforeImagePath)
-      : fs.readFileSync(afterImagePath); // Fallback for demo
-    const afterBuffer = fs.readFileSync(afterImagePath);
+      const afterBuffer = fs.readFileSync(afterImagePath);
 
-    // Call Gemini
-    const verificationResult = await verifyResolution(beforeBuffer, afterBuffer, req.file.mimetype);
-    console.log('Gemini Verification:', verificationResult);
+      const verificationResult = await verifyResolution(
+        beforeBuffer,
+        afterBuffer,
+        req.file.mimetype
+      );
 
-    if (verificationResult.resolved) {
-      const imageUrlAfter = `/uploads/${req.file.filename}`;
-      const updatedIssue = await issueModel.resolveIssue(issue_id, imageUrlAfter);
+      console.log('Gemini Verification:', verificationResult);
 
-      res.json({
-        success: true,
-        resolved: true,
-        message: 'Issue verified and resolved!',
-        issue: updatedIssue,
-      });
-    } else {
+      if (verificationResult.resolved) {
+        const imageUrlAfter = `/uploads/${req.file.filename}`;
+        const updatedIssue = await issueModel.resolveIssue(
+          issue_id,
+          imageUrlAfter
+        );
+
+        return res.json({
+          success: true,
+          resolved: true,
+          message: 'Issue verified and resolved!',
+          issue: updatedIssue,
+        });
+      }
+
       res.json({
         success: false,
         resolved: false,
         message: 'AI determination: Issue not fully resolved.',
         explanation: verificationResult.explanation,
       });
+    } catch (error) {
+      next(error);
     }
-  } catch (error) {
-    console.error('Error resolving issue:', error);
-    res.status(500).json({ error: error.message });
   }
-});
+);
 
 /**
- * GET ALL ISSUES (For Admin/Worker Dashboard)
+ * GET ALL ISSUES
  */
-app.get('/api/issues', async (req, res) => {
+app.get('/api/issues', async (req, res, next) => {
   try {
     const issues = await issueModel.getAllIssues();
     res.json(issues);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+  } catch (error) {
+    next(error);
   }
 });
 
+/* =======================
+   ERROR HANDLER (LAST)
+======================= */
+
+app.use((err, req, res, next) => {
+  console.error('Server Error:', err);
+
+  res.status(500).json({
+    error: 'Internal Server Error',
+    details:
+      process.env.NODE_ENV === 'development'
+        ? err.message
+        : undefined,
+  });
+});
+
+/* =======================
+   SERVER START
+======================= */
+
 function calculateSLA(severity) {
   const now = new Date();
-  if (severity === 'High') return new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24h
-  if (severity === 'Medium') return new Date(now.getTime() + 48 * 60 * 60 * 1000); // 48h
-  return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7d
+  if (severity === 'High')
+    return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  if (severity === 'Medium')
+    return new Date(now.getTime() + 48 * 60 * 60 * 1000);
+  return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 }
 
 app.listen(port, () => {

@@ -1,13 +1,17 @@
 import axios from 'axios';
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'hhttps://your-backend.railway.app';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 10000,
 });
 
+// Request interceptor (AUTH TOKEN)
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -19,14 +23,21 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Response interceptor (ERROR HANDLING)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Handle global errors (e.g., 401 Unauthorized)
+    console.error(
+      'API Error:',
+      error.response?.data || error.message
+    );
+
     if (error.response?.status === 401) {
-      // Redirect to login or clear token
+      // Optional: logout / redirect
+      // localStorage.removeItem('token');
       // window.location.href = '/auth';
     }
+
     return Promise.reject(error);
   }
 );
