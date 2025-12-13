@@ -38,6 +38,12 @@ export const Dashboard = () => {
           description="Awaiting action"
         />
         <StatCard
+          title="In Progress"
+          value={inProgress}
+          icon={<Clock className="h-4 w-4 text-blue-500" />}
+          description="Currently being fixed"
+        />
+        <StatCard
           title="Critical"
           value={issues.filter(i => i.priority === 'HIGH').length}
           icon={<AlertTriangle className="h-4 w-4 text-red-500" />}

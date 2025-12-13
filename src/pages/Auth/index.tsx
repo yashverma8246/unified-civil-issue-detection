@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuth } from '@/context/AuthContext';
 import { ShieldAlert, User, HardHat, Shield } from 'lucide-react';
+import authBg from '@/assets/auth-bg.png';
 
 export const AuthPage = () => {
   const navigate = useNavigate();
@@ -34,7 +35,9 @@ export const AuthPage = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-8rem)] bg-slate-50 px-4">
+    <div className="flex flex-col items-center justify-center min-h-screen relative px-4 text-slate-900">
+      <div className="absolute inset-0 bg-cover bg-center z-0" style={{ backgroundImage: `url(${authBg})`, opacity: 0.15 }}></div>
+      <div className="relative z-10 w-full max-w-md">
       <div className="mb-8 text-center animate-fade-in">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600">
            <ShieldAlert className="h-10 w-10" />
@@ -100,6 +103,7 @@ export const AuthPage = () => {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

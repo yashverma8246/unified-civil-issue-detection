@@ -3,22 +3,23 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { Camera, MapPin, Shield } from 'lucide-react';
+import heroBg from '@/assets/hero-bg.png';
 
 export const Landing = () => {
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-slate-900 py-24 sm:py-40">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?q=80&w=2613&auto=format&fit=crop')] bg-cover bg-center opacity-20" />
+        <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: `url(${heroBg})` }} />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent" />
         
         <div className="container relative mx-auto px-4 text-center animate-fade-in">
-          <Badge variant="outline" className="mb-6 border-slate-700 text-slate-300 backdrop-blur-sm self-center">
-            Official Civic Platform
+          <Badge variant="outline" className="mb-6 border-primary-400 text-primary-100 backdrop-blur-sm self-center">
+            Sampark Setu: Official Civic Platform
           </Badge>
           <h1 className="mb-6 text-5xl font-extrabold tracking-tight text-white sm:text-7xl">
             Report. Track. <br className="hidden sm:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-primary-200">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-red-500">
               Resolve Together.
             </span>
           </h1>
@@ -40,29 +41,7 @@ export const Landing = () => {
         </div>
       </section>
 
-      {/* Stats Section (Mock) */}
-      <section className="border-y border-slate-200 bg-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4 text-center">
-             <div className="space-y-2">
-                <h3 className="text-4xl font-bold text-slate-900">2.5k+</h3>
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">Issues Solved</p>
-             </div>
-             <div className="space-y-2">
-                <h3 className="text-4xl font-bold text-slate-900">48h</h3>
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">Avg. Resolution</p>
-             </div>
-             <div className="space-y-2">
-                <h3 className="text-4xl font-bold text-slate-900">98%</h3>
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">Satisfaction</p>
-             </div>
-             <div className="space-y-2">
-                <h3 className="text-4xl font-bold text-slate-900">12</h3>
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">Patner Cities</p>
-             </div>
-          </div>
-        </div>
-      </section>
+
 
       {/* Features */}
       <section className="bg-slate-50 py-20 sm:py-32">

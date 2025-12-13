@@ -2,7 +2,7 @@ import { useIssueStore } from '@/store/useIssueStore';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { formatDate } from '@/utils';
-import { MapPin, Calendar, CheckCircle, Clock } from 'lucide-react';
+import { MapPin, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
 

@@ -1,8 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
-import { Menu, X, ShieldAlert } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
+import logo from '@/assets/logo.png';
 
 export const Navbar = () => {
   const { user, logout } = useAuth();
@@ -15,13 +16,13 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+    <nav className="border-b border-primary-100 bg-white/80 backdrop-blur-md sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="h-8 w-8 text-blue-600" />
-            <Link to="/" className="text-xl font-bold text-slate-900">
-              CivicSense
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="Sampark Setu" className="h-10 w-auto" />
+            <Link to="/" className="text-xl font-bold text-slate-900 tracking-tight">
+              Sampark Setu
             </Link>
           </div>
 
@@ -32,9 +33,6 @@ export const Navbar = () => {
               </Link>
               <Link to="/report" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">
                 Report Issue
-              </Link>
-              <Link to="/issues" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">
-                Track Issues
               </Link>
               
               {user ? (
@@ -72,9 +70,6 @@ export const Navbar = () => {
            </Link>
            <Link to="/report" className="block text-slate-600 hover:text-blue-600 font-medium">
              Report Issue
-           </Link>
-           <Link to="/issues" className="block text-slate-600 hover:text-blue-600 font-medium">
-             Track Issues
            </Link>
            {user ? (
              <>
