@@ -1,95 +1,61 @@
-# Unified Civic Issue Detection & Grievance Redressal Platform (U-CIDGRP)
+# Unified Civic Issue Detection Platform
 
-## Overview
+## Problem Statement
 
-U-CIDGRP is a full-stack web application designed to bridge the gap between citizens and civic authorities. It enables citizens to report visual civic issues (like potholes, garbage, broken streetlights) which are automatically analyzed by AI and routed to the correct department (PWD, Electricity, etc.).
+Civic issue reporting is currently fragmented, manual, and often opaque. Citizens struggle to report problems like potholes or garbage dumps, and authorities lack real-time visibility into these issues, leading to delayed resolution and lack of accountability.
 
-## Key Features
+## Solution Overview
 
-### For Citizens
+This platform provides a unified, AI-powered interface for citizens to report issues and for authorities to track them.
 
-- **One-Click Reporting**: Upload a photo, and our Gemini AI integration automatically detects the issue type, severity, and department.
-- **Real-Time Tracking**: Monitor the status of reported issues (Pending, Resolved).
-- **Privacy**: Strict data isolation ensures you only see your own reports.
+- **For Citizens**: A simple web app to upload photos, which are automatically classified and geo-tagged.
+- **For Authorities**: A real-time dashboard to monitor reported issues, track status, and analyze performance.
 
-### For Authorities (Department Admins & Workers)
+## Key Features & Innovation
 
-- **Role-Based Dashboards**:
-  - **Super Admin**: City-wide health view with heatmaps and department performance analytics.
-  - **Dept Admin**: Manages issues specific to their department (e.g., PWD Admin only sees PWD issues).
-  - **Workers**: Receive assigned tasks on mobile-friendly dashboards for field resolution.
-- **Department Filtering**: Strict backend logic ensures data segregation (e.g., Electricity workers never see Sanitation issues).
-- **Geospatial Visualization**: Heatmaps and issue plotting using Google Maps integration.
-
-### AI Integration
-
-- **Automatic Classification**: Uses Google Gemini Pro Vision to analyze images.
-- **Civic Assistant**: A chatbot that answers citizens' queries about civic laws and safety.
+- **AI-Powered Classification**: (Frontend Ready) Placeholder for automatic image recognition to categorize issues (e.g., Pothole, Sanitation).
+- **Unified Workflow**: Seamless flow from citizen report -> department routing -> field resolution.
+- **Transparency**: Public tracking of issue status to build trust.
+- **Analytics**: Admin dashboard for KPIs and city-wide health monitoring.
 
 ## Tech Stack
 
-- **Frontend**: React 19, TypeScript, Tailwind CSS v4, Vite, Zustand, Lucide React.
-- **Backend**: Node.js, Express.js.
-- **Database**: PostgreSQL (with proper relational schema).
-- **AI Services**: Google Gemini API (Visual & Text).
-- **Deployment**:
-  - Frontend: Vercel (Ready)
-  - Backend/DB: Railway
+- **Framework**: React 19 + TypeScript + Vite
+- **Styling**: Tailwind CSS v4
+- **State Management**: Zustand
+- **Routing**: React Router v7
+- **HTTP Client**: Axios
 
-## Setup & Demo
+## Project Structure
 
-### Prerequisites
+```
+src/
+ ├── app/           # App-wide routing and layout
+ ├── components/    # Reusable UI components (Button, Card, etc.)
+ ├── features/      # Feature-specific logic (future expansion)
+ ├── pages/         # Page components (Landing, Report, Dashboard)
+ ├── services/      # API services
+ ├── store/         # Global state (Zustand)
+ ├── types/         # TypeScript interfaces
+ └── utils/         # Helper functions
+```
 
-- Node.js v18+
-- PostgreSQL Database
-- Google Gemini API Key
+## How to Run Locally
 
-### Installation
+1. Clone the repository.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+4. Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-1.  **Clone & Install**
+## Future Roadmap
 
-    ```bash
-    git clone <repo-url>
-    cd unified-civil-issue-detection-main
-    npm install
-    cd node
-    npm install
-    ```
-
-2.  **Environment Variables**
-    Create a `.env` file in the `node/` directory:
-
-    ```env
-    DATABASE_URL=postgresql://user:pass@localhost:5432/civic_db
-    GEMINI_API_KEY=your_gemini_key
-    JWT_SECRET=your_jwt_secret
-    ```
-
-3.  **Run Locally**
-    - Start Backend: `cd node && npm start`
-    - Start Frontend: `npm run dev`
-
-### Demo Credentials (One-Click Access available on Login Page)
-
-| Role                   | Email                         | Password      | Department  |
-| :--------------------- | :---------------------------- | :------------ | :---------- |
-| **Super Admin**        | `super@civic.com`             | `admin123`    | N/A         |
-| **Citizen**            | `citizen@civic.com`           | `password123` | N/A         |
-| **Electricity Admin**  | `electricity_admin@civic.com` | `admin123`    | Electricity |
-| **PWD Admin**          | `pwd_admin@civic.com`         | `admin123`    | PWD         |
-| **Electricity Worker** | `qqqq@gmail.com`              | `qqqq`        | Electricity |
-
-## Deployment Guide
-
-### Frontend (Vercel)
-
-1.  Connect this repo to Vercel.
-2.  Set Environment Variable: `VITE_API_URL` = `https://<your-railway-backend-url>`
-3.  Deploy!
-
-### Backend (Railway)
-
-1.  Connect repo to Railway.
-2.  Add PostgreSQL plugin.
-3.  Set `GEMINI_API_KEY` and `JWT_SECRET` in variables.
-4.  Deploy.
+- **Integration**: Connect to a real Backend API.
+- **AI Model**: Integrate TensorFlow.js or an external API for image classification.
+- **GIS**: Integrate Google Maps or Mapbox for interactive map views.
+- **IoT**: Connect with smart city sensors for automatic detection.
