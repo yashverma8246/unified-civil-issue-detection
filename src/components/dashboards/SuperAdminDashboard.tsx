@@ -10,15 +10,18 @@ interface Stats {
   highPriority: number;
 }
 
+import api from '@/services/api';
+
 export default function SuperAdminDashboard() {
   const [stats, setStats] = useState<Stats>({ total: 0, resolved: 0, open: 0, highPriority: 0 });
   const [mapCenter, setMapCenter] = useState<{lat: number, lng: number} | null>(null);
   const [deptPerformance, setDeptPerformance] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/issues')
-      .then(res => res.json())
-      .then(data => {
+    // Use api instance to ensure Auth Header is sent!
+    api.get('/api/issues')
+      .then(res => {
+        const data = res.data; // axios uses .data
         const total = data.length;
         const resolved = data.filter((i: any) => i.status === 'Resolved').length;
         const highPriority = data.filter((i: any) => i.severity === 'High').length;
@@ -39,22 +42,42 @@ export default function SuperAdminDashboard() {
             setMapCenter({ lat: 19.0760, lng: 72.8777 }); 
         }
 
-        // Calculate Department Performance
-        const depts = ['Public Works (PWD)', 'Sanitation / Nagar Nigam', 'Water (PHED)', 'Electricity Board'];
+        // Calculate Department Performance & Categories
+        const depts = ['PWD', 'Nagar Nigam', 'PHED', 'Electricity'];
         const perf = depts.map(deptName => {
             const deptIssues = data.filter((i: any) => i.department_assigned === deptName);
             const totalDept = deptIssues.length;
-            if (totalDept === 0) return { name: deptName, score: 100, color: 'bg-slate-300' }; // Default to 100 if no issues? Or 0? Let's say 100 (clean record)
+            
+            // Calculate Top Categories for this Dept
+            const categories: {[key: string]: number} = {};
+            deptIssues.forEach((i: any) => {
+                categories[i.issue_type] = (categories[i.issue_type] || 0) + 1;
+            });
+            const topCategories = Object.entries(categories)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 3) // Top 3
+                .map(([name, count]) => ({ name, count }));
+
+            if (totalDept === 0) return { 
+                name: deptName, score: 100, color: 'bg-emerald-500', 
+                total: 0, resolved: 0, open: 0, 
+                categories: [] 
+            }; 
             
             const resolvedDept = deptIssues.filter((i: any) => i.status === 'Resolved').length;
-            const score = Math.round((resolvedDept / totalDept) * 100);
+            const openDept = totalDept - resolvedDept;
+            const score = totalDept > 0 ? Math.round((resolvedDept / totalDept) * 100) : 100;
             
             let color = 'bg-primary-500';
             if (score >= 90) color = 'bg-emerald-500';
-            else if (score < 60) color = 'bg-red-500';
+            else if (score < 50) color = 'bg-red-500';
             else if (score < 80) color = 'bg-amber-500';
 
-            return { name: deptName, score, color };
+            return { 
+                name: deptName, score, color, 
+                total: totalDept, resolved: resolvedDept, open: openDept,
+                categories: topCategories
+            };
         });
         setDeptPerformance(perf);
 
@@ -140,9 +163,6 @@ export default function SuperAdminDashboard() {
                 {/* Real Map Visualization */}
                 {typeof window !== 'undefined' && mapCenter ? (
                    <div className="absolute inset-0 z-0">
-                       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-                         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-                         crossOrigin=""/>
                        
                        <iframe 
                            width="100%" 
@@ -172,46 +192,59 @@ export default function SuperAdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="col-span-3 border-0 shadow-lg ring-1 ring-slate-900/5">
+        <Card className="col-span-3 border-0 shadow-lg ring-1 ring-slate-900/5 overflow-y-auto max-h-[500px]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
                 <PieChart className="h-5 w-5 text-slate-400" />
-                Department Performance
+                Department Analytics
             </CardTitle>
-            <CardDescription>SLA Compliance & Efficiency</CardDescription>
+            <CardDescription>Performance & Issue Breakdown</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-               {(deptPerformance.length > 0 ? deptPerformance : [
-                   { name: 'Public Works (PWD)', score: 92, color: 'bg-emerald-500' },
-                   { name: 'Sanitation / Nagar Nigam', score: 78, color: 'bg-primary-500' },
-                   { name: 'Water (PHED)', score: 65, color: 'bg-amber-500' },
-                   { name: 'Electricity Board', score: 88, color: 'bg-primary-500' }
-               ]).map(dept => (
-                 <div key={dept.name} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-slate-700">{dept.name}</span>
-                        <span className="font-bold text-slate-900">{dept.score}%</span>
+               {(deptPerformance.length > 0 ? deptPerformance : []).map(dept => (
+                <div key={dept.name} className="space-y-3 p-3 rounded-lg bg-slate-50 border border-slate-100">
+                    <div className="flex items-center justify-between">
+                        <span className="font-semibold text-slate-800">{dept.name}</span>
+                        <Badge variant={dept.score >= 90 ? 'success' : 'outline'}>{dept.score}% Score</Badge>
                     </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                    
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="bg-white p-2 rounded border border-slate-100">
+                            <div className="text-xs text-slate-400 uppercase">Total</div>
+                            <div className="font-bold text-slate-900">{dept.total}</div>
+                        </div>
+                        <div className="bg-white p-2 rounded border border-slate-100">
+                            <div className="text-xs text-slate-400 uppercase">Resolved</div>
+                            <div className="font-bold text-emerald-600">{dept.resolved}</div>
+                        </div>
+                         <div className="bg-white p-2 rounded border border-slate-100">
+                            <div className="text-xs text-slate-400 uppercase">Open</div>
+                            <div className="font-bold text-orange-600">{dept.open}</div>
+                        </div>
+                    </div>
+
+                    <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden">
                        <div className={`h-full ${dept.color} transition-all duration-1000 ease-out`} style={{ width: `${dept.score}%` }}></div>
                     </div>
+
+                    {/* Category Breakdown */}
+                    {dept.categories && dept.categories.length > 0 && (
+                        <div className="pt-2 border-t border-slate-100 mt-2">
+                            <p className="text-[10px] uppercase font-semibold text-slate-400 mb-1">Top Issue Types</p>
+                            <div className="flex flex-wrap gap-1">
+                                {dept.categories.map((cat: any) => (
+                                    <Badge key={cat.name} variant="outline" className="text-[10px] h-5 px-1.5 bg-slate-100 text-slate-600 border-slate-200">
+                                        {cat.name}: {cat.count}
+                                    </Badge>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                  </div>
                ))}
             </div>
             
-            <div className="mt-8 pt-6 border-t border-slate-100">
-                <div className="rounded-lg bg-slate-50 p-4">
-                    <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">System Status</h4>
-                    <div className="flex items-center gap-2">
-                        <span className="relative flex h-2.5 w-2.5">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                        </span>
-                        <span className="text-sm font-medium text-slate-700">AI Classification Nodes Online</span>
-                    </div>
-                </div>
-            </div>
           </CardContent>
         </Card>
       </div>

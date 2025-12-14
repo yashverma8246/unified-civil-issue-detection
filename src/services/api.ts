@@ -42,4 +42,16 @@ api.interceptors.response.use(
   }
 );
 
+
+
+/**
+ * CHAT ASSISTANT
+ */
+export const chatWithAssistant = async (message: string, history: any[] = []) => {
+  const response = await api.post('/api/chat', { message, history });
+  return response.data;
+};
+
+
 export default api;
+

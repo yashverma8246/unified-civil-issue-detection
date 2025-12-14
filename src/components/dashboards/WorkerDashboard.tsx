@@ -17,6 +17,8 @@ interface Task {
   sla_due_date: string;
 }
 
+import api from '@/services/api';
+
 export default function WorkerDashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,10 +27,9 @@ export default function WorkerDashboard() {
 
   // Mock fetch tasks - in real app would filter by assigned worker
   useEffect(() => {
-    fetch('http://localhost:5000/api/issues')
-      .then(res => res.json())
-      .then(data => {
-        setTasks(data.filter((i: Task) => i.status !== 'Resolved')); // Show only active
+    api.get('/api/issues')
+      .then(res => {
+        setTasks(res.data.filter((i: Task) => i.status !== 'Resolved')); // Show only active
         setLoading(false);
       })
       .catch(err => {

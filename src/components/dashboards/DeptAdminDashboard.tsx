@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/services/api';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Users, CheckCircle2 } from 'lucide-react';
+import { Users, CheckCircle2, Map } from 'lucide-react';
 
 export default function DeptAdminDashboard() {
   const { user } = useAuth();
@@ -12,6 +12,7 @@ export default function DeptAdminDashboard() {
   const [workers, setWorkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIssue, setSelectedIssue] = useState<any>(null); // For modal
+  const [mapCenter, setMapCenter] = useState<{lat: number, lng: number} | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -26,6 +27,16 @@ export default function DeptAdminDashboard() {
       ]);
       setIssues(issuesRes.data);
       setWorkers(workersRes.data);
+
+      // Calculate Centroid
+      const issuesWithLoc = issuesRes.data.filter((i: any) => i.geo_latitude && i.geo_longitude);
+      if (issuesWithLoc.length > 0) {
+          const avgLat = issuesWithLoc.reduce((sum: number, i: any) => sum + parseFloat(i.geo_latitude), 0) / issuesWithLoc.length;
+          const avgLng = issuesWithLoc.reduce((sum: number, i: any) => sum + parseFloat(i.geo_longitude), 0) / issuesWithLoc.length;
+          setMapCenter({ lat: avgLat, lng: avgLng });
+      } else {
+          setMapCenter({ lat: 19.0760, lng: 72.8777 }); 
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -74,6 +85,37 @@ export default function DeptAdminDashboard() {
               </CardContent>
           </Card>
       </div>
+
+      <Card className="mb-8 border-0 shadow-lg ring-1 ring-slate-900/5 animate-slide-up">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <Map className="h-5 w-5 text-slate-400" />
+                Issue Heatmap
+            </CardTitle>
+            <CardDescription>Geographic distribution of reported issues in your jurisdiction.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+             <div className="h-[400px] w-full bg-slate-900 relative group overflow-hidden">
+                {/* Real Map Visualization */}
+                {typeof window !== 'undefined' && mapCenter ? (
+                   <div className="absolute inset-0 z-0">
+                       <iframe 
+                           width="100%" 
+                           height="100%" 
+                           frameBorder="0" 
+                           scrolling="no" 
+                           src={`https://maps.google.com/maps?q=${mapCenter.lat},${mapCenter.lng}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                           className="filter grayscale opacity-50 hover:grayscale-0 transition-all duration-500"
+                       ></iframe>
+                   </div>
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-slate-500">
+                        Map data unavailable
+                    </div>
+                )}
+             </div>
+          </CardContent>
+      </Card>
 
       <Card className="animate-slide-up">
         <CardHeader>

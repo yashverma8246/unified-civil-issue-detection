@@ -72,6 +72,31 @@ export const AuthPage = () => {
     }
   };
 
+  const handleDemoLogin = async (email: string, pass: string) => {
+    setEmail(email);
+    setPassword(pass);
+    // Auto submit effectively
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      
+      login(data.token, data.user);
+      if (data.user.role === 'SUPER_ADMIN' || data.user.role === 'DEPT_ADMIN') navigate('/admin');
+      else if (data.user.role === 'WORKER') navigate('/worker');
+      else navigate('/client');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen relative px-4 text-slate-900">
       <div className="absolute inset-0 bg-cover bg-center z-0" style={{ backgroundImage: `url(${authBg})`, opacity: 0.15 }}></div>
@@ -202,11 +227,27 @@ export const AuthPage = () => {
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-slate-500">
-               Admins must be added by developers.
-               <br/>
-               Super Admin: super@civic.com / admin123
+            <div className="mt-8 border-t border-slate-200 pt-6">
+               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-center mb-4">Demo Access (One Click)</p>
+               <div className="grid grid-cols-2 gap-3">
+                 <Button variant="outline" size="sm" onClick={() => handleDemoLogin('super@civic.com', 'admin123')} className="text-xs border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100">Super Admin</Button>
+                 <Button variant="outline" size="sm" onClick={() => handleDemoLogin('citizen@civic.com', 'password123')} className="text-xs border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100">Citizen</Button>
+                 <div className="col-span-2 grid grid-cols-2 gap-2 mt-2">
+                   <p className="col-span-2 text-[10px] text-center text-slate-400 font-medium border-t pt-2 mt-1">Department Admins</p>
+                   <Button variant="outline" size="sm" onClick={() => handleDemoLogin('pwd_admin@civic.com', 'admin123')} className="text-[10px] h-7">PWD Admin</Button>
+                   <Button variant="outline" size="sm" onClick={() => handleDemoLogin('electricity_admin@civic.com', 'admin123')} className="text-[10px] h-7">Elec. Admin</Button>
+                   <Button variant="outline" size="sm" onClick={() => handleDemoLogin('nagarnigam_admin@civic.com', 'admin123')} className="text-[10px] h-7">Nagar Nigam</Button>
+                   <Button variant="outline" size="sm" onClick={() => handleDemoLogin('jalvibhag_admin@civic.com', 'admin123')} className="text-[10px] h-7">Jal Vibhag</Button>
+
+                   <p className="col-span-2 text-[10px] text-center text-slate-400 font-medium border-t pt-2 mt-1">Workers</p>
+                   <Button variant="outline" size="sm" onClick={() => handleDemoLogin('worker@civic.com', 'password123')} className="text-[10px] h-7 border-orange-200 text-orange-700">PWD Worker</Button>
+                   <Button variant="outline" size="sm" onClick={() => handleDemoLogin('qqqq@gmail.com', 'qqqq')} className="text-[10px] h-7 border-orange-200 text-orange-700">Elec. Worker</Button>
+                   <Button variant="outline" size="sm" onClick={() => handleDemoLogin('nn_worker@civic.com', 'password123')} className="text-[10px] h-7 border-orange-200 text-orange-700">NN Worker</Button>
+                   <Button variant="outline" size="sm" onClick={() => handleDemoLogin('phed_worker@civic.com', 'password123')} className="text-[10px] h-7 border-orange-200 text-orange-700">PHED Worker</Button>
+                 </div>
+               </div>
             </div>
+
           </CardContent>
         </Card>
       </div>

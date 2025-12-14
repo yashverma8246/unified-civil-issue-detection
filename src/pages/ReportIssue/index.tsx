@@ -16,7 +16,7 @@ export const ReportIssue = () => {
   }
 
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // State for form and analysis
@@ -25,6 +25,9 @@ export const ReportIssue = () => {
     description: '',
     address: ''
   });
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<any>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [location, setLocation] = useState<{lat: number, long: number} | null>(null);
@@ -66,17 +69,37 @@ export const ReportIssue = () => {
     }
   };
 
-  const analyzeImage = async (_file: File) => {
-    setUploading(true);
-    // We'll use the report_issue endpoint which saves immediately for now
-    // Ideally we'd have a separate analyze endpoint, but let's just create the issue
-    // and then update it or just show the result.
-    // SHORTCUT: Just submitting the form creates the issue. 
-    // If we want to show analysis BEFORE submitting, we need a separate endpoint.
-    // For this prototype, let's just make the "Submit Report" do the work.
-    // But the user asked for "take details from client".
-    // Let's allow manual input, then submit everything.
-    setUploading(false);
+  const analyzeImage = async (file: File) => {
+    setAnalyzing(true);
+    setSuggestions([]);
+    
+    const data = new FormData();
+    data.append('image', file);
+    
+    try {
+        const response = await fetch('http://localhost:5000/api/analyze_image', {
+            method: 'POST',
+            body: data
+        });
+        const result = await response.json();
+        
+        if (result.success && result.suggestions) {
+            setSuggestions(result.suggestions);
+            if (result.suggestions.length > 0) {
+               // Optional: Auto-select first one or just let user choose
+               // setFormData(prev => ({ ...prev, title: result.suggestions[0].title }));
+            }
+        }
+    } catch (err) {
+        console.error("Analysis failed", err);
+    } finally {
+        setAnalyzing(false);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: any) => {
+      setFormData(prev => ({ ...prev, title: suggestion.title }));
+      setSelectedSuggestion(suggestion);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,11 +109,17 @@ export const ReportIssue = () => {
         return;
     }
 
+    if (!location) {
+        alert("Please allow access to your location to proceed. This is required for improved accuracy.");
+        return;
+    }
+
     setLoading(true);
     const data = new FormData();
     data.append('image', selectedFile);
     // Use logged in user ID or fallback
-    data.append('reporter_id', user?.id || 'anonymous_citizen');
+    // Use logged in user Email for consistent filtering in DB
+    data.append('reporter_id', user?.email || 'anonymous_citizen');
     if (location) {
         data.append('geo_latitude', location.lat.toString());
         data.append('geo_longitude', location.long.toString());
@@ -98,6 +127,16 @@ export const ReportIssue = () => {
     
     // We can also send the manual description to override/append to AI description
     data.append('description', formData.description); 
+    data.append('title', formData.title);
+    
+    // Pass selected AI details to skip re-analysis
+    if (selectedSuggestion) {
+        data.append('issue_type', selectedSuggestion.issue_type);
+        data.append('department', selectedSuggestion.department);
+        if (selectedSuggestion.severity) {
+             data.append('severity', selectedSuggestion.severity);
+        }
+    }
     
     try {
         const response = await fetch('http://localhost:5000/api/report_issue', {
@@ -180,6 +219,41 @@ export const ReportIssue = () => {
                   )}
                 </div>
 
+                {/* AI Suggestions Area */}
+                {(analyzing || suggestions.length > 0) && (
+                    <div className="space-y-3">
+                        <label className="block text-sm font-medium text-slate-700">
+                            {analyzing ? 'Analyzing image for issues...' : 'AI Detected Issues (Select one)'}
+                        </label>
+                        
+                        {analyzing ? (
+                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                <Loader2 className="h-4 w-4 animate-spin text-primary-500" />
+                                <span>Scanning image for civic violations...</span>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {suggestions.map((s, idx) => (
+                                    <div 
+                                        key={idx}
+                                        onClick={() => handleSuggestionClick(s)}
+                                        className={`cursor-pointer p-3 rounded-md border transition-all ${selectedSuggestion?.title === s.title ? 'border-primary-500 bg-primary-50 ring-1 ring-primary-500' : 'border-slate-200 hover:border-primary-300 hover:bg-slate-50'}`}
+                                    >
+                                        <p className="font-medium text-sm text-slate-800">{s.title}</p>
+                                        <div className="flex justify-between items-center mt-1">
+                                            <span className="text-xs text-slate-500">{s.department}</span>
+                                            <div className="flex gap-1">
+                                                {s.severity && <span className={`text-[10px] px-1.5 py-0.5 rounded border ${s.severity === 'High' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>{s.severity}</span>}
+                                                <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 border border-slate-200">{s.issue_type}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Location Section */}
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
                    <div className="flex items-center gap-3">
@@ -187,7 +261,7 @@ export const ReportIssue = () => {
                           <MapPin className="h-5 w-5" />
                       </div>
                       <div>
-                          <h3 className="text-sm font-medium text-slate-900">Incident Location</h3>
+                          <h3 className="text-sm font-medium text-slate-900">Incident Location <span className="text-red-500">*</span></h3>
                           <p className="text-xs text-slate-500">
                               {location 
                                   ? `${location.lat.toFixed(6)}, ${location.long.toFixed(6)}` 
@@ -242,7 +316,7 @@ export const ReportIssue = () => {
                   />
                 </div>
 
-                <Button type="submit" className="w-full" size="lg" disabled={loading || uploading || !selectedFile}>
+                <Button type="submit" className="w-full" size="lg" disabled={loading || analyzing || !selectedFile}>
                   {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing & Submitting...</> : 'Submit Report'}
                 </Button>
               </form>

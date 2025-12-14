@@ -3,7 +3,12 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { classifyIssue, verifyResolution } = require('./geminiService');
+const {
+  classifyIssue,
+  verifyResolution,
+  chatWithCivicAssistant,
+  generateIssueSuggestions,
+} = require('./geminiService');
 const issueModel = require('./issueModel');
 const authController = require('./authController');
 
@@ -62,6 +67,29 @@ app.get('/health', (req, res) => {
 });
 
 /**
+ * ANALYZE IMAGE (Get Suggestions)
+ */
+app.post('/api/analyze_image', upload.single('image'), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image uploaded' });
+    }
+
+    const imagePath = req.file.path;
+    const imageBuffer = fs.readFileSync(imagePath);
+    const mimeType = req.file.mimetype;
+
+    console.log(`Generating suggestions for ${req.file.filename}...`);
+
+    const result = await generateIssueSuggestions(imageBuffer, mimeType);
+
+    res.json({ success: true, suggestions: result.suggestions });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * REPORT ISSUE
  */
 app.post('/api/report_issue', upload.single('image'), async (req, res, next) => {
@@ -76,9 +104,23 @@ app.post('/api/report_issue', upload.single('image'), async (req, res, next) => 
 
     console.log(`Processing issue report for ${req.file.filename}...`);
 
-    // Call Gemini
-    const aiResult = await classifyIssue(imageBuffer, mimeType);
-    console.log('Gemini Analysis:', aiResult);
+    // Check if we already have the analysis from the user's selection
+    const userTitle = req.body.title || '';
+    let aiResult;
+
+    if (req.body.issue_type && req.body.department && req.body.severity) {
+      console.log('Using user-selected issue details (skipping re-analysis)...');
+      aiResult = {
+        issue_type: req.body.issue_type,
+        department: req.body.department,
+        severity: req.body.severity,
+        description: req.body.description || 'Reported by citizen (AI Assisted Selection)',
+      };
+    } else {
+      // Fallback: Re-analyze if no explicit selection details provided
+      aiResult = await classifyIssue(imageBuffer, mimeType, userTitle);
+      console.log('Gemini Analysis (Re-run):', aiResult);
+    }
 
     const issueData = {
       image_url_before: `/uploads/${req.file.filename}`,
@@ -185,9 +227,18 @@ app.get('/api/issues', authenticateToken, async (req, res, next) => {
     } else if (user.role === 'WORKER') {
       filters.assigned_worker_id = user.email; // Assuming worker assigned by email
     } else if (user.role === 'DEPT_ADMIN') {
+      if (!user.department) {
+        // If Dept Admin has no department, they shouldn't see ANYTHING.
+        // Prevents leakage of all issues.
+        return res.json([]);
+      }
       filters.department_assigned = user.department;
     } else if (user.role === 'SUPER_ADMIN') {
       // No filters, sees all
+    } else {
+      // Default Deny Policy: If role is not recognized, show NOTHING.
+      // This prevents "fall through" leakage where unknown roles see everything.
+      return res.status(403).json({ error: 'Unauthorized role for issue access' });
     }
 
     const issues = await issueModel.getAllIssues(filters);
@@ -237,6 +288,24 @@ app.post('/api/issues/assign', authenticateToken, async (req, res, next) => {
 
     const updatedIssue = await issueModel.assignIssue(issueId, workerEmail);
     res.json({ success: true, issue: updatedIssue });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * CHAT WITH CIVIC ASSISTANT
+ */
+app.post('/api/chat', async (req, res, next) => {
+  try {
+    const { message, history } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    const response = await chatWithCivicAssistant(message, history || []);
+    res.json(response);
   } catch (error) {
     next(error);
   }
